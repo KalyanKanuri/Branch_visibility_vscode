@@ -1,0 +1,52 @@
+function prompt {
+    $host.ui.rawui.windowtitle = $pwd.path
+    $branch = $(git branch --show-current 2>$null)
+    if ($branch) {
+        $branch = ' (' + $branch + ')'
+    }
+    Write-Host "$($executionContext.SessionState.Path.CurrentLocation)$branch" -NoNewline -ForegroundColor Green
+    
+    # Check for Git status
+    $status = Get-GitStatus -Quiet
+    if ($status -ne $null) {
+        Write-Host " [$status]" -NoNewline -ForegroundColor Yellow
+    }
+    
+    return "> "
+}
+
+$GitColors = @{
+    'Modified' = 'Yellow'
+    'Added' = 'Green'
+    'Deleted' = 'Red'
+    'Renamed' = 'Magenta'
+    'Untracked' = 'Yellow'
+}
+
+function Get-GitStatus {
+    $status = git status --porcelain=v2 2>$null
+    if (!$status) { return $null }
+    $status = $status -split "`n"
+    $changes = [System.Collections.Generic.List[string]]::new()
+    $status | ForEach-Object {
+        $changeType = $_.Substring(0,2)
+        $file = $_.Substring(3).Trim()
+        $color = $GitColors[$changeType]
+        $symbol = $null
+        switch ($changeType) {
+            'Modified' { $symbol = 'M' }
+            'Added' { $symbol = 'A' }
+            'Deleted' { $symbol = 'D' }
+            'Renamed' { $symbol = 'R' }
+            'Untracked' { $symbol = '?' }
+        }
+        if ($color) {
+            $fileWithSymbol = "$symbol$file"
+            $changes.Add($fileWithSymbol)
+        }
+    }
+    if ($changes.Count -eq 0) { return $null }
+    return $changes -join ', '
+}
+
+Set-Alias gs Get-GitStatus
