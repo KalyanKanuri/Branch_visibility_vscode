@@ -1,0 +1,16 @@
+function global:prompt {
+    $branch = $(git branch 2> $null | findstr /r /b "^\*" | foreach-object { $_.ToString().Trim() -replace "^\* " })
+    $status = $(git status --porcelain 2> $null | foreach-object { $_.Trim() })
+    $remoteStatus = $(git status -uno 2> $null | findstr "Your branch is up to date" | foreach-object { $_.Trim() })
+
+    $statusString = ""
+    if ($status) {
+        $statusString = "$(if ($status -match "^ M") {Write-Host "*" -NoNewline -ForegroundColor Yellow} elseif ($status -match "^A") {Write-Host "+" -NoNewline -ForegroundColor Green} elseif ($status -match "^D") {Write-Host "-" -NoNewline -ForegroundColor Red} else {Write-Host "?" -NoNewline -ForegroundColor Blue})"
+    }
+    elseif ($remoteStatus) {
+        $statusString = "$(Write-Host "✓" -NoNewline -ForegroundColor Green)"
+    }
+
+    Write-Host "PS $(Get-Location)> [$branch$statusString] " -NoNewline -ForegroundColor DarkCyan
+    return " "
+}
